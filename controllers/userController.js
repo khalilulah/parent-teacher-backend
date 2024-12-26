@@ -60,6 +60,8 @@ exports.loginUser = async (req, res) => {
     // Generate JWT
     console.log("JWT_SECRET:", process.env.JWT_SECRET);
     console.log("Payload:", { id: user._id, role: user.role });
+
+    
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,

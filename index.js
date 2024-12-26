@@ -1,5 +1,5 @@
 require("dotenv").config();
-const express= require('express')
+const express = require('express')
 const cors = require('cors')
 const helmet = require('helmet')
 const cookieParser = require('cookie-parser')
@@ -13,7 +13,7 @@ app.use(helmet())
 app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
-const PORT =8081;
+const PORT =8082;
 
 mongoose
 .connect(process.env.MONGO_URI)
@@ -32,9 +32,12 @@ app.post('/',(req,res) =>{
   res.send('this is a post request!')
 })
 app.use("/api/users", userRoutes);
-app.listen(PORT,() =>{
+app.listen(PORT,'0.0.0.0',() =>{
   console.log(`Server running at http://localhost:${PORT}`)
 })
+// app.listen(5000, '0.0.0.0', () => {
+//   console.log('Server running on port 5000');
+// });
 
 // const http = require('node:http');
 
