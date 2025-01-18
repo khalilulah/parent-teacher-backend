@@ -49,7 +49,8 @@ const userSchema = new mongoose.Schema(
       default: "inactive",
     },
     addedBy: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User", // References superAdmin
     },
     lastLogin: Date,
   },

@@ -2,6 +2,8 @@ const User = require("../models/userModel");
 const {
   sendResponse,
   sendEmailVerification,
+  generateStrongPassword,
+  sendTemporaryLoginCredentials,
 } = require("../utils/utilFunctions");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -31,7 +33,7 @@ const generateVerificationCode = async () => {
 };
 
 /**
- * Register a new user and send the appropriate verification.
+ * Register a new user (super admin) and send the appropriate verification.
  *
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -48,95 +50,144 @@ const register = async (req, res) => {
     }
 
     // Extract necessary details
-    const { firstname, surname, password, verifyPassword, email, role } =
-      req.body;
+    const { firstname, surname, password, verifyPassword, email } = req.body;
 
-    //   Register a new super admin
-    if (userData?.role === "superAdmin") {
-      // Validate required fields
-      if (
-        !password ||
-        !verifyPassword ||
-        !firstname ||
-        !surname ||
-        !email ||
-        !role
-      ) {
-        return sendResponse(
-          res,
-          400,
-          "Please provide all required parameters",
-          null
-        );
-      }
+    // Validate required fields
+    if (!password || !verifyPassword || !firstname || !surname || !email) {
+      return sendResponse(
+        res,
+        400,
+        "Please provide all required parameters",
+        null
+      );
+    }
 
-      // Trim input strings and validate passwords
-      const trimmedPassword = password.trim();
-      const trimmedVerifyPassword = verifyPassword.trim();
+    // Trim input strings and validate passwords
+    const trimmedPassword = password.trim();
+    const trimmedVerifyPassword = verifyPassword.trim();
 
-      if (!validatePassword(trimmedPassword, trimmedVerifyPassword)) {
-        return sendResponse(
-          res,
-          400,
-          "Passwords do not match or are too short",
-          null
-        );
-      }
+    if (!validatePassword(trimmedPassword, trimmedVerifyPassword)) {
+      return sendResponse(
+        res,
+        400,
+        "Passwords do not match or are too short",
+        null
+      );
+    }
 
-      // Check if a user exists with the same email
-      let existingUser = await User.findOne({ email });
+    // Check if a user exists with the same email
+    let existingUser = await User.findOne({ email });
 
-      // Generate a new verification code and expiry date
-      const verificationCode = await generateVerificationCode();
-      const expiryDate = new Date(Date.now() + 2 * 60 * 1000);
+    // Generate a new verification code and expiry date
+    const verificationCode = await generateVerificationCode();
+    const expiryDate = new Date(Date.now() + 2 * 60 * 1000);
 
-      if (existingUser) {
-        // If user exists and is not active, update their verification details
-        if (existingUser.status === "inactive") {
-          existingUser.verification.code = verificationCode;
-          existingUser.verification.expiryDate = expiryDate;
-          await existingUser.save();
+    if (existingUser) {
+      // If user exists and is not active, update their verification details
+      if (existingUser.status === "inactive") {
+        existingUser.verification.code = verificationCode;
+        existingUser.verification.expiryDate = expiryDate;
+        await existingUser.save();
 
-          // Send verification code again
-          await sendEmailVerification(res, email, verificationCode);
-          return sendResponse(res, 200, "Verification code sent");
-        } else {
-          // If user exists and is active, return an error message
-          return sendResponse(res, 403, "User already exists", null);
-        }
+        // Send verification code again
+        await sendEmailVerification(res, email, verificationCode);
+        return sendResponse(res, 200, "Verification code sent");
       } else {
-        // Create a new user if no existing user is found
-        const userDetails = {
-          email,
-          password: trimmedPassword,
-          verification: {
-            code: verificationCode,
-            expiryDate: expiryDate,
-          },
-          firstname,
-          surname,
-          role,
-        };
-
-        // Create new user
-        const savedUser = await User.create(userDetails);
-
-        if (savedUser) {
-          // Send verification code again
-          await sendEmailVerification(res, email, verificationCode);
-
-          return sendResponse(res, 201, "Verification code sent");
-        }
-
-        return sendResponse(
-          res,
-          400,
-          "Error occurred while creating user",
-          null
-        );
+        // If user exists and is active, return an error message
+        return sendResponse(res, 403, "User already exists", null);
       }
-    } else if (userData?.role === "organizationAdmin") {
-      //
+    } else {
+      // Create a new user if no existing user is found
+      const userDetails = {
+        email,
+        password: trimmedPassword,
+        verification: {
+          code: verificationCode,
+          expiryDate: expiryDate,
+        },
+        firstname,
+        surname,
+        role: "superAdmin",
+      };
+
+      // Create new user
+      const savedUser = await User.create(userDetails);
+
+      if (savedUser) {
+        // Send verification code again
+        await sendEmailVerification(res, email, verificationCode);
+
+        return sendResponse(res, 201, "Verification code sent");
+      }
+
+      return sendResponse(res, 400, "Error occurred while creating user", null);
+    }
+  } catch (error) {
+    console.error("Registration Error:", error);
+    return sendResponse(
+      res,
+      500,
+      error?.message || error || "Internal Server Error",
+      null
+    );
+  }
+};
+
+/**
+ * Register a new user (organization admin) and send the appropriate verification.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} Response with registration status and data
+ */
+const addOrganizationAdmin = async (req, res) => {
+  try {
+    // Get user data from token
+    const { userData } = req.userData;
+
+    // Validate request (Additional validation just in case)
+    if (!userData) {
+      return sendResponse(res, 401, "Please login to continue", null);
+    }
+
+    // Extract necessary details
+    const { firstname, surname, email } = req.body;
+
+    // Validate required fields
+    if (!firstname || !surname || !email) {
+      return sendResponse(res, 400, "Please provide all required parameters");
+    }
+
+    // Check if a user exists with the same email
+    let existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return sendResponse(res, 403, "User already exists", null);
+    } else {
+      // Generate password
+      const password = generateStrongPassword(); // Default 12 characters
+
+      // Create a new user if no existing user is found
+      const userDetails = {
+        email,
+        password,
+        firstname,
+        surname,
+        role: "organizationAdmin",
+        addedBy: userData?._id,
+      };
+
+      // Send temporary login credentials
+      await sendTemporaryLoginCredentials(email, firstname, surname, password);
+
+      // Create new user
+      const savedUser = await User.create(userDetails);
+
+      if (savedUser) {
+        return sendResponse(res, 201, "Temporary login credentials sent");
+      }
+
+      return sendResponse(res, 400, "Error occurred while creating user", null);
     }
   } catch (error) {
     console.error("Registration Error:", error);
@@ -254,4 +305,4 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, login };
+module.exports = { register, login, addOrganizationAdmin };
