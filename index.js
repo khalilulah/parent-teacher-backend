@@ -1,55 +1,67 @@
 require("dotenv").config();
-const express = require('express')
-const cors = require('cors')
-const helmet = require('helmet')
-const cookieParser = require('cookie-parser')
-const mongoose =require('mongoose')
-const userRoutes = require("./routes/userRoutes");
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+const { sendResponse } = require("./utils/utilFunctions");
+const { authRoutes, userRoutes } = require("./routes");
 
-const app =express()
+// Initialize app
+const app = express();
 
-app.use(cors());
-app.use(helmet())
-app.use(cookieParser())
-app.use(express.json())
-app.use(express.urlencoded({extended:true}))
-const PORT =8082;
+// PORT USED
+const PORT = process.env.PORT || 8080;
 
-mongoose
-.connect(process.env.MONGO_URI)
-.then(() =>{
-  console.log("database connected");
-  
-}).catch((err) => {
-console.log(err);
+// CORS config
+// Define a list of allowed origins
+const allowedOrigins = ["http://localhost:5173", "http://localhost:3000"];
 
-})
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
 
-app.get('/',(req,res) =>{
-  res.send('hello world...')
-})
-app.post('/',(req,res) =>{
-  res.send('this is a post request!')
-})
+    // Check if the origin is in the allowedOrigins list
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+};
+
+// OTHER CONFIGS
+app.use(express.json());
+app.use(cors(corsOptions));
+
+// ROUTES
+app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
-app.listen(PORT,'0.0.0.0',() =>{
-  console.log(`Server running at http://localhost:${PORT}`)
-})
-// app.listen(5000, '0.0.0.0', () => {
-//   console.log('Server running on port 5000');
-// });
 
-// const http = require('node:http');
+// API Connection test
+app.get("/", (req, res) => {
+  res.send("hello world...");
+});
+app.post("/", (req, res) => {
+  res.send("this is a post request!");
+});
 
-// const hostname = '127.0.0.1';
-// const port = 3000;
+// Middleware to catch undefined routes
+app.use((req, res, next) => {
+  sendResponse(
+    res,
+    404,
+    "The requested endpoint does not exist or is undocumented.",
+    null
+  );
+});
 
-// const server = http.createServer((req, res) => {
-//   res.statusCode = 200;
-//   res.setHeader('Content-Type', 'text/plain');
-//   res.end('Hello, World!\n');
-// });
-
-// server.listen(port, hostname, () => {
-//   console.log(`Server running at http://${hostname}:${port}/`);
-// });
+// CONNECT TO DB, THEN SERVER
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`DB connection successful, server connected to port ${PORT}`);
+    });
+  })
+  .catch((err) => console.log(err));
