@@ -48,6 +48,9 @@ const userSchema = new mongoose.Schema(
       enum: ["inactive", "active", "suspended", "deactivated"],
       default: "inactive",
     },
+    addedBy: {
+      type: String,
+    },
     lastLogin: Date,
   },
   { discriminatorKey: "role" },

@@ -1,4 +1,6 @@
+const User = require("../models/userModel");
 const sendMail = require("./sendMail");
+const jwt = require("jsonwebtoken");
 
 /**
  * Sends a verification code email to the specified email address.
@@ -562,7 +564,108 @@ const sendResponse = (res, statusCode, message, data) => {
   });
 };
 
+/**
+ * Middleware to verify the authenticity of JWT token in the request header.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function.
+ * @returns {void}
+ */
+const verifyToken = (req, res, next) => {
+  try {
+    // Extract authHeader from the request header
+    const authHeader = req.headers.authorization;
+
+    // If authHeader is not provided, send 401 Unauthorized response
+    if (!authHeader) {
+      return sendResponse(
+        res,
+        401,
+        "You're not authenticated, please login",
+        null
+      );
+    }
+
+    // Check if token starts with "Bearer"
+    if (!authHeader.startsWith("Bearer ")) {
+      return sendResponse(res, 401, "Invalid token format", null);
+    }
+
+    // Extract the token part after "Bearer "
+    const token = authHeader.split(" ")[1];
+
+    // Verify the token
+    jwt.verify(token, process.env.JWT_SECRET, (err, userData) => {
+      if (err) {
+        // If token is invalid, send 403 Forbidden response
+        return sendResponse(
+          res,
+          403,
+          "Invalid or expired token, please login",
+          null
+        );
+      }
+
+      // Attach decoded user data to request object for further use
+      req.userData = userData;
+      next();
+    });
+  } catch (error) {
+    // Handle unexpected errors
+    console.error("Error verifying token:", error);
+    // Send 500 Internal Server Error response
+    return sendResponse(res, 500, "Internal Server Error", null);
+  }
+};
+
+// /**
+//  * Middleware to verify if the user calling the API is a super admin.
+//  * @param {Object} req - Express request object.
+//  * @param {Object} res - Express response object.
+//  * @param {Function} next - Express next middleware function.
+//  * @returns {void}
+//  */
+const verifySuperAdmin = async (req, res, next) => {
+  try {
+    // Call the verifyToken middleware to verify the authenticity of the JWT token
+    verifyToken(req, res, async () => {
+      // Extract the decoded token from the request object
+      const decodedToken = req.userData?.userData;
+
+      // Check if the user is a super admin
+      const user = await User.findById(decodedToken._id);
+
+      if (!user) {
+        return sendResponse(res, 401, "User not found");
+      }
+      if (user.role !== "superAdmin") {
+        return sendResponse(
+          res,
+          401,
+          "You do not have permission to access this resource"
+        );
+      }
+
+      // Attach decoded user data to request object for further use
+      console.log(req.userData);
+
+      // If the user is a super admin, call the next middleware
+      next();
+    });
+  } catch (error) {
+    // Handle token verification errors
+    return sendResponse(
+      res,
+      403,
+      "Invalid or expired token, please login",
+      null
+    );
+  }
+};
+
 module.exports = {
   sendResponse,
   sendEmailVerification,
+  verifyToken,
+  verifySuperAdmin,
 };

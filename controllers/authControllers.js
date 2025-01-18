@@ -39,85 +39,104 @@ const generateVerificationCode = async () => {
  */
 const register = async (req, res) => {
   try {
+    // Get user data from token
+    const { userData } = req.userData;
+
+    // Validate request (Additional validation just in case)
+    if (!userData) {
+      return sendResponse(res, 401, "Please login to continue", null);
+    }
+
+    // Extract necessary details
     const { firstname, surname, password, verifyPassword, email, role } =
       req.body;
 
-    // Validate required fields
-    if (
-      !password ||
-      !verifyPassword ||
-      !firstname ||
-      !surname ||
-      !email ||
-      !role
-    ) {
-      return sendResponse(
-        res,
-        400,
-        "Please provide all required parameters",
-        null
-      );
-    }
+    //   Register a new super admin
+    if (userData?.role === "superAdmin") {
+      // Validate required fields
+      if (
+        !password ||
+        !verifyPassword ||
+        !firstname ||
+        !surname ||
+        !email ||
+        !role
+      ) {
+        return sendResponse(
+          res,
+          400,
+          "Please provide all required parameters",
+          null
+        );
+      }
 
-    // Trim input strings and validate passwords
-    const trimmedPassword = password.trim();
-    const trimmedVerifyPassword = verifyPassword.trim();
+      // Trim input strings and validate passwords
+      const trimmedPassword = password.trim();
+      const trimmedVerifyPassword = verifyPassword.trim();
 
-    if (!validatePassword(trimmedPassword, trimmedVerifyPassword)) {
-      return sendResponse(
-        res,
-        400,
-        "Passwords do not match or are too short",
-        null
-      );
-    }
+      if (!validatePassword(trimmedPassword, trimmedVerifyPassword)) {
+        return sendResponse(
+          res,
+          400,
+          "Passwords do not match or are too short",
+          null
+        );
+      }
 
-    // Check if a user exists with the same email
-    let existingUser = await User.findOne({ email });
+      // Check if a user exists with the same email
+      let existingUser = await User.findOne({ email });
 
-    // Generate a new verification code and expiry date
-    const verificationCode = await generateVerificationCode();
-    const expiryDate = new Date(Date.now() + 2 * 60 * 1000);
+      // Generate a new verification code and expiry date
+      const verificationCode = await generateVerificationCode();
+      const expiryDate = new Date(Date.now() + 2 * 60 * 1000);
 
-    if (existingUser) {
-      // If user exists and is not active, update their verification details
-      if (existingUser.status === "inactive") {
-        existingUser.verification.code = verificationCode;
-        existingUser.verification.expiryDate = expiryDate;
-        await existingUser.save();
+      if (existingUser) {
+        // If user exists and is not active, update their verification details
+        if (existingUser.status === "inactive") {
+          existingUser.verification.code = verificationCode;
+          existingUser.verification.expiryDate = expiryDate;
+          await existingUser.save();
 
-        // Send verification code again
-        await sendEmailVerification(res, email, verificationCode);
-        return sendResponse(res, 200, "Verification code sent");
+          // Send verification code again
+          await sendEmailVerification(res, email, verificationCode);
+          return sendResponse(res, 200, "Verification code sent");
+        } else {
+          // If user exists and is active, return an error message
+          return sendResponse(res, 403, "User already exists", null);
+        }
       } else {
-        // If user exists and is active, return an error message
-        return sendResponse(res, 403, "User already exists", null);
+        // Create a new user if no existing user is found
+        const userDetails = {
+          email,
+          password: trimmedPassword,
+          verification: {
+            code: verificationCode,
+            expiryDate: expiryDate,
+          },
+          firstname,
+          surname,
+          role,
+        };
+
+        // Create new user
+        const savedUser = await User.create(userDetails);
+
+        if (savedUser) {
+          // Send verification code again
+          await sendEmailVerification(res, email, verificationCode);
+
+          return sendResponse(res, 201, "Verification code sent");
+        }
+
+        return sendResponse(
+          res,
+          400,
+          "Error occurred while creating user",
+          null
+        );
       }
-    } else {
-      // Create a new user if no existing user is found
-      const userDetails = {
-        email,
-        password: trimmedPassword,
-        verification: {
-          code: verificationCode,
-          expiryDate: expiryDate,
-        },
-        firstname,
-        surname,
-        role,
-      };
-
-      // Create new user
-      const savedUser = await User.create(userDetails);
-
-      if (savedUser) {
-        // Send verification code again
-        await sendEmailVerification(res, email, verificationCode);
-
-        return sendResponse(res, 201, "Verification code sent");
-      }
-
-      return sendResponse(res, 400, "Error occurred while creating user", null);
+    } else if (userData?.role === "organizationAdmin") {
+      //
     }
   } catch (error) {
     console.error("Registration Error:", error);
@@ -193,6 +212,10 @@ const login = async (req, res) => {
           // Create and assign a JWT
           // Generate JWT token for the user
           const token = generateToken(existingUser, "100y"); // Generating a token with 1-hour expiry
+
+          //   UPDATE THE LASTLOGIN FIELD
+          existingUser.lastLogin = new Date();
+          await existingUser.save();
 
           // Prepare response data by removing sensitive information from user object
           const {

@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const { sendResponse } = require("./utils/utilFunctions");
-const { authRoutes, userRoutes } = require("./routes");
+const { authRoutes, userRoutes, organizationRoutes } = require("./routes");
 
 // Initialize app
 const app = express();
@@ -36,6 +36,7 @@ app.use(cors(corsOptions));
 
 // ROUTES
 app.use("/api/auth", authRoutes);
+app.use("/api/organization", organizationRoutes);
 app.use("/api/users", userRoutes);
 
 // API Connection test

@@ -14,10 +14,9 @@ const organizationSchema = new mongoose.Schema(
       country: String,
       postalCode: String,
     },
-    admin: {
-      type: mongoose.Schema.Types.ObjectId,
+    admins: {
+      type: [mongoose.Schema.Types.ObjectId],
       ref: "User",
-      required: true,
     },
     isActive: {
       type: Boolean,
