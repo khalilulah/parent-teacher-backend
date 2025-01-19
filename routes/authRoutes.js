@@ -4,8 +4,11 @@ const {
   register,
   login,
   addOrganizationAdmin,
+  updatePasswordByCode,
+  sendCode,
+  changePassword,
 } = require("../controllers/authControllers");
-const { verifyRole } = require("../utils/utilFunctions");
+const { verifyRole, verifyToken } = require("../utils/utilFunctions");
 const router = express.Router();
 
 // Route to add a super admin
@@ -17,6 +20,17 @@ router.post(
   verifyRole(["superAdmin"]),
   addOrganizationAdmin
 );
+
+// Login Route
 router.post("/login", login);
+
+// Default password change  Route
+router.post("/changeDefaultPassword", verifyToken, changePassword);
+
+// Reset password Route
+router.post("/resetPassword", updatePasswordByCode);
+
+// Resend OTP Route
+router.post("/sendOtp", sendCode);
 
 module.exports = router;

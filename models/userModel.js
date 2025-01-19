@@ -35,6 +35,10 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isDefaultPassword: {
+      type: Boolean,
+      default: true,
+    },
     verification: {
       code: { type: Number },
       expiryDate: { type: Date },
