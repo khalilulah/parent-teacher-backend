@@ -7,6 +7,7 @@ const {
   updatePasswordByCode,
   sendCode,
   changePassword,
+  addTeacher,
 } = require("../controllers/authControllers");
 const { verifyRole, verifyToken } = require("../utils/utilFunctions");
 const router = express.Router();
@@ -20,6 +21,9 @@ router.post(
   verifyRole(["superAdmin"]),
   addOrganizationAdmin
 );
+
+// Route to add a teacher
+router.post("/register/teacher", verifyRole(["organizationAdmin"]), addTeacher);
 
 // Login Route
 router.post("/login", login);

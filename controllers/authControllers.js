@@ -1,3 +1,6 @@
+const { OrganizationAdmin } = require("../models/OrganizationAdminModel");
+const Organization = require("../models/organizationModel");
+const { Teacher } = require("../models/teacherModel");
 const User = require("../models/userModel");
 const {
   sendResponse,
@@ -151,11 +154,18 @@ const addOrganizationAdmin = async (req, res) => {
     }
 
     // Extract necessary details
-    const { firstname, surname, email } = req.body;
+    const { firstname, surname, email, organizationId } = req.body;
 
     // Validate required fields
-    if (!firstname || !surname || !email) {
+    if (!firstname || !surname || !email || !organizationId) {
       return sendResponse(res, 400, "Please provide all required parameters");
+    }
+
+    // Check if the organization is valid
+    let existingOrganization = await Organization.findById(organizationId);
+
+    if (!existingOrganization?.name) {
+      return sendResponse(res, 400, "Invalid Organization ID");
     }
 
     // Check if a user exists with the same email
@@ -173,7 +183,7 @@ const addOrganizationAdmin = async (req, res) => {
         password,
         firstname,
         surname,
-        role: "organizationAdmin",
+        organization: organizationId,
         addedBy: userData?._id,
       };
 
@@ -181,9 +191,101 @@ const addOrganizationAdmin = async (req, res) => {
       await sendTemporaryLoginCredentials(email, firstname, surname, password);
 
       // Create new user
-      const savedUser = await User.create(userDetails);
+      const savedUser = await OrganizationAdmin.create(userDetails);
 
       if (savedUser) {
+        // Add user (organization admin) to the organization
+        existingOrganization.admins.push(savedUser?._id);
+        await existingOrganization.save();
+
+        return sendResponse(res, 201, "Temporary login credentials sent");
+      }
+
+      return sendResponse(res, 400, "Error occurred while creating user", null);
+    }
+  } catch (error) {
+    console.error("Registration Error:", error);
+    return sendResponse(
+      res,
+      500,
+      error?.message || error || "Internal Server Error",
+      null
+    );
+  }
+};
+
+/**
+ * Register a new user (teacher) and send the appropriate verification.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} Response with registration status and data
+ */
+const addTeacher = async (req, res) => {
+  try {
+    // Get user data from token
+    const { userData } = req.userData;
+
+    const organizationId = userData?.organization;
+
+    // Validate request (Additional validation just in case)
+    if (!userData) {
+      return sendResponse(res, 401, "Please login to continue");
+    }
+
+    // Extract necessary details
+    const { firstname, surname, email, classLevel, guardians } = req.body;
+
+    // Validate required fields
+    if (!firstname || !surname || !email) {
+      return sendResponse(res, 400, "Please provide all required parameters");
+    }
+
+    // Check if the organization is valid
+    let existingOrganization = await Organization.findById(organizationId);
+
+    if (!existingOrganization?.name) {
+      return sendResponse(res, 400, "Invalid Organization ID");
+    }
+
+    // Verify if the user exists and is active
+    const query = {
+      email,
+      status: "active",
+    };
+
+    // Check if a user exists with the same email
+    let existingUser = await User.findOne(query);
+
+    if (existingUser) {
+      return sendResponse(res, 403, "User already exists", null);
+    } else {
+      // Generate password
+      const password = generateStrongPassword(); // Default 12 characters
+
+      // Create a new user if no existing user is found
+      const userDetails = {
+        email,
+        password,
+        firstname,
+        surname,
+        organization: organizationId,
+        addedBy: userData?._id,
+        classLevel,
+        guardians,
+      };
+
+      // Send temporary login credentials
+      await sendTemporaryLoginCredentials(email, firstname, surname, password);
+
+      // Create new user
+      const savedUser = await Teacher.create(userDetails);
+
+      if (savedUser) {
+        // Add user (teacher) to the organization
+        existingOrganization.teachers.push(savedUser?._id);
+        await existingOrganization.save();
+
         return sendResponse(res, 201, "Temporary login credentials sent");
       }
 
@@ -513,4 +615,5 @@ module.exports = {
   changePassword,
   sendCode,
   updatePasswordByCode,
+  addTeacher,
 };
