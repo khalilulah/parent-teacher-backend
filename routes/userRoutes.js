@@ -1,6 +1,10 @@
 const express = require("express");
-const { registerUser, loginUser } = require("../controllers/userController");
-const verifyRole = require("../middlewares/verifyRole"); // Import the middleware
+const {
+  registerUser,
+  loginUser,
+  createParentAccount, // New function for teachers to create parents
+} = require("../controllers/userController");
+const verifyRole = require("../middlewares/verifyRole");
 
 const router = express.Router();
 
@@ -9,6 +13,12 @@ router.post("/register", registerUser); // Registration is open for all
 router.post("/login", loginUser); // Login is open for all
 
 // Protected Routes
+router.post(
+  "/create-parent", 
+  verifyRole(["teacher"]), // Only teachers can create parent accounts
+  createParentAccount
+);
+
 router.get(
   "/teacher-dashboard",
   verifyRole(["teacher"]), // Only teachers can access this route
@@ -34,4 +44,5 @@ router.get(
 );
 
 module.exports = router;
+
 
