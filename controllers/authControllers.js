@@ -315,6 +315,7 @@ const login = async (req, res) => {
     // Extracting request body parameter using destructuring
     const { email, password } = req.body;
 
+    console.log(email);
     // Validate input parameters
     if (!email || !password) {
       // Sending a 400 response if any required parameter is missing
