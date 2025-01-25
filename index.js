@@ -3,10 +3,14 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const { sendResponse } = require("./utils/utilFunctions");
+const { Server } = require("socket.io");
+const http = require("http");
 const { authRoutes, userRoutes, organizationRoutes } = require("./routes");
 
 // Initialize app
 const app = express();
+const server = http.createServer(app); // Use HTTP server to integrate with Socket.IO
+const io = new Server(server);
 
 // PORT USED
 const PORT = process.env.PORT || 8080;
@@ -61,8 +65,28 @@ app.use((req, res, next) => {
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
-    app.listen(PORT, () => {
-      console.log(`DB connection successful, server connected to port ${PORT}`);
-    });
+    console.log(`DB connection successful, server connected to port ${PORT}`);
   })
   .catch((err) => console.log(err));
+
+// SOCKET.IO Logic
+io.on("connection", (socket) => {
+  console.log(`User connected: ${socket.id}`);
+
+  // Listen for messages from clients
+  socket.on("send_message", (data) => {
+    console.log("Message received:", data);
+
+    // Emit the message to all connected clients
+    io.emit("receive_message", data);
+  });
+
+  socket.on("disconnect", () => {
+    console.log(`User disconnected: ${socket.id}`);
+  });
+});
+
+// Start the server
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
