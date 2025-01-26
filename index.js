@@ -5,7 +5,14 @@ const mongoose = require("mongoose");
 const { sendResponse } = require("./utils/utilFunctions");
 const { Server } = require("socket.io");
 const http = require("http");
-const { authRoutes, userRoutes, organizationRoutes } = require("./routes");
+const {
+  authRoutes,
+  userRoutes,
+  organizationRoutes,
+  chatRoutes,
+} = require("./routes");
+const Message = require("./models/messageModel");
+const User = require("./models/userModel");
 
 // Initialize app
 const app = express();
@@ -42,6 +49,7 @@ app.use(cors(corsOptions));
 app.use("/api/auth", authRoutes);
 app.use("/api/organization", organizationRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/messages", chatRoutes);
 
 // API Connection test
 app.get("/", (req, res) => {
@@ -69,20 +77,71 @@ mongoose
   })
   .catch((err) => console.log(err));
 
+// Initialize object
+const connectedUsers = {};
+
 // SOCKET.IO Logic
 io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
-  // Listen for messages from clients
-  socket.on("send_message", (data) => {
-    console.log("Message received:", data);
+  // Identify and register the user
+  socket.on("identify_user", (userId) => {
+    connectedUsers[userId] = socket.id; // Map user ID to socket ID
+    console.log(`User ${userId} is now online with socket ID: ${socket.id}`);
+    socket.emit("user_identified"); // Emit acknowledgment
+  });
 
-    // Emit the message to all connected clients
-    io.emit("receive_message", data);
+  // Listen for get users request from clients
+  socket.on("get_users", async (userId) => {
+    try {
+      console.log("User Id:", userId);
+
+      // Get users from the database
+      const users = await User.find();
+
+      // Get the socket ID of the requesting user
+      const socketId = connectedUsers[userId];
+      if (socketId) {
+        io.to(socketId).emit("send_users", users);
+      }
+
+      console.log(connectedUsers);
+    } catch (err) {
+      console.error("Error saving message:", err);
+    }
+  });
+
+  // Listen for messages from clients
+  socket.on("send_message", async (data) => {
+    const { sender, receiver, message } = data;
+
+    try {
+      console.log("Message received:", data);
+
+      // Save message to the database
+      const newMessage = new Message({ sender, receiver, message });
+      await newMessage.save();
+
+      // Find the receiver's socket ID
+      const receiverSocketId = connectedUsers[receiver];
+      if (receiverSocketId) {
+        // Emit the message to the receiver
+        io.to(receiverSocketId).emit("receive_message", newMessage);
+      }
+    } catch (err) {
+      console.error("Error saving message:", err);
+    }
   });
 
   socket.on("disconnect", () => {
     console.log(`User disconnected: ${socket.id}`);
+    for (const userId in connectedUsers) {
+      if (connectedUsers[userId] === socket.id) {
+        delete connectedUsers[userId];
+        console.log(`User ${userId} is now offline.`);
+        break;
+      }
+    }
   });
 });
 

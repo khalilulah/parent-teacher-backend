@@ -361,7 +361,6 @@ const login = async (req, res) => {
           const {
             password: userPassword,
             verification,
-            _id,
             __v,
             ...userData
           } = existingUser._doc;
