@@ -77,3 +77,43 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
+
+// Create a new parent account (only accessible by teachers)
+exports.createParentAccount = async (req, res) => {
+  const { name, email, password } = req.body;
+
+  // Validate input
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  try {
+    // Check if the email is already registered
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email is already in use." });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create a new user with the role of "parent"
+    const newParent = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role: "parent", // Set role to "parent"
+    });
+
+    // Save the parent to the database
+    await newParent.save();
+
+    res.status(201).json({
+      message: "Parent account created successfully",
+      user: { id: newParent._id, name: newParent.name, email: newParent.email },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
