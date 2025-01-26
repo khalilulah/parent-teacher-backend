@@ -1,12 +1,16 @@
 const { OrganizationAdmin } = require("../models/OrganizationAdminModel");
+const Chat = require("../models/chatModel");
+const { Guardian } = require("../models/guardianModel");
 const Organization = require("../models/organizationModel");
 const { Teacher } = require("../models/teacherModel");
 const User = require("../models/userModel");
+const { v4: uuidv4 } = require("uuid"); // For generating unique chat IDs
 const {
   sendResponse,
   sendEmailVerification,
   generateStrongPassword,
   sendTemporaryLoginCredentials,
+  generateUsername,
 } = require("../utils/utilFunctions");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
@@ -286,6 +290,104 @@ const addTeacher = async (req, res) => {
         existingOrganization.teachers.push(savedUser?._id);
         await existingOrganization.save();
 
+        return sendResponse(res, 201, "Temporary login credentials sent");
+      }
+
+      return sendResponse(res, 400, "Error occurred while creating user", null);
+    }
+  } catch (error) {
+    console.error("Registration Error:", error);
+    return sendResponse(
+      res,
+      500,
+      error?.message || error || "Internal Server Error",
+      null
+    );
+  }
+};
+
+/**
+ * Register a new user (guardian) and send the appropriate verification.
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} Response with registration status and data
+ */
+const addGuardian = async (req, res) => {
+  try {
+    // Get user data from token
+    const { userData } = req.userData;
+
+    // Check if the teacher is valid
+    let existingTeacher = await Teacher.findById(userData?._id);
+
+    if (!existingTeacher) {
+      return sendResponse(res, 400, "Invalid Organization ID");
+    }
+
+    // Extract necessary details
+    const { firstname, surname, email } = req.body;
+
+    // Validate required fields
+    if (!firstname || !surname || !email) {
+      return sendResponse(res, 400, "Please provide all required parameters");
+    }
+
+    // Verify if the user exists and is active
+    const query = {
+      email,
+      status: "active",
+    };
+
+    // Check if a user exists with the same email
+    let existingUser = await User.findOne(query);
+
+    if (existingUser) {
+      return sendResponse(res, 403, "User already exists", null);
+    } else {
+      // Generate password
+      const password = generateStrongPassword(); // Default 12 characters
+
+      // Generate username
+      const uniqueUsername = generateUsername(firstname, surname);
+      // Create a new user if no existing user is found
+      const userDetails = {
+        email,
+        password,
+        firstname,
+        surname,
+        uniqueUsername,
+        addedBy: userData?._id,
+        teachers: [userData?._id],
+      };
+
+      // Send temporary login credentials
+      await sendTemporaryLoginCredentials(email, firstname, surname, password);
+
+      // Create new user
+      const savedUser = await Guardian.create(userDetails);
+
+      if (savedUser) {
+        // Add user (guardian) to the teacher's guardians list
+        existingTeacher.guardians.push(savedUser?._id);
+        await existingTeacher.save();
+
+        // Create Chat between users
+        const participantIds = [savedUser?._id, existingTeacher?._id];
+        const sortedIds = participantIds.sort();
+
+        // Check if a chat with these participants exists
+        let chat = await Chat.findOne({ participants: sortedIds });
+
+        if (!chat) {
+          // If not, create a new chat
+          const chatId = uuidv4();
+          chat = new Chat({
+            chatId,
+            participants: sortedIds,
+          });
+          await chat.save();
+        }
         return sendResponse(res, 201, "Temporary login credentials sent");
       }
 
@@ -616,4 +718,5 @@ module.exports = {
   sendCode,
   updatePasswordByCode,
   addTeacher,
+  addGuardian,
 };

@@ -8,9 +8,9 @@ const messageSchema = new mongoose.Schema(
       ref: "User", // Reference to the User model
       required: true,
     },
-    receiver: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Reference to the User model
+    chatId: {
+      type: String,
+      ref: "Chat", // Reference to the Chat model
       required: true,
     },
     message: {

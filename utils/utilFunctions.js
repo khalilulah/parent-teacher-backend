@@ -182,6 +182,17 @@ function generateStrongPassword(length = 12) {
 }
 // End of function to generate password
 
+// Function to generate username
+function generateUsername(firstname, surname) {
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
+  return `${firstname
+    .toLowerCase()
+    .replace(/\s+/g, "")}_${randomSuffix}_${surname
+    .toLowerCase()
+    .replace(/\s+/g, "")}`;
+}
+// End of function to generate username
+
 module.exports = {
   sendResponse,
   sendEmailVerification,
@@ -189,4 +200,5 @@ module.exports = {
   verifyRole,
   generateStrongPassword,
   sendTemporaryLoginCredentials,
+  generateUsername,
 };

@@ -13,6 +13,7 @@ const {
 } = require("./routes");
 const Message = require("./models/messageModel");
 const User = require("./models/userModel");
+const Chat = require("./models/chatModel");
 
 // Initialize app
 const app = express();
@@ -96,13 +97,15 @@ io.on("connection", (socket) => {
     try {
       console.log("User Id:", userId);
 
-      // Get users from the database
-      const users = await User.find();
+      // Get chats from the database
+      const chats = await Chat.find({
+        participants: { $in: [userId] },
+      }).populate("participants");
 
       // Get the socket ID of the requesting user
       const socketId = connectedUsers[userId];
       if (socketId) {
-        io.to(socketId).emit("send_users", users);
+        io.to(socketId).emit("send_users", chats);
       }
 
       console.log(connectedUsers);
@@ -111,23 +114,28 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Handle room joining
+  socket.on("join_chat", (chatId) => {
+    socket.join(chatId);
+    console.log(`User joined room: ${chatId}`);
+  });
+
+  // Handle room leaving
+  socket.on("leave_chat", (chatId) => {
+    socket.leave(chatId);
+    console.log(`User left room: ${chatId}`);
+  });
+
   // Listen for messages from clients
   socket.on("send_message", async (data) => {
-    const { sender, receiver, message } = data;
-
     try {
-      console.log("Message received:", data);
+      let { sender, chatId, message } = data;
 
       // Save message to the database
-      const newMessage = new Message({ sender, receiver, message });
+      const newMessage = new Message({ sender, chatId, message });
       await newMessage.save();
 
-      // Find the receiver's socket ID
-      const receiverSocketId = connectedUsers[receiver];
-      if (receiverSocketId) {
-        // Emit the message to the receiver
-        io.to(receiverSocketId).emit("receive_message", newMessage);
-      }
+      io.to(chatId).emit("receive_message", newMessage);
     } catch (err) {
       console.error("Error saving message:", err);
     }

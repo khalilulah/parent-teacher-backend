@@ -1,3 +1,4 @@
+const Chat = require("../models/chatModel");
 const Message = require("../models/messageModel");
 const Organization = require("../models/organizationModel");
 const { sendResponse } = require("../utils/utilFunctions");
@@ -13,10 +14,10 @@ const getUserChats = async (req, res) => {
       return sendResponse(res, 401, "Please login to continue", null);
     }
 
-    const { userId, otherUserId } = req.params;
+    const { chatId } = req.params;
 
     // Validate required fields
-    if (!userId || !otherUserId) {
+    if (!chatId) {
       return sendResponse(
         res,
         400,
@@ -26,15 +27,8 @@ const getUserChats = async (req, res) => {
     }
 
     // Query DB for specific shats
-    const messages = await Message.find({
-      $or: [
-        { sender: userId, receiver: otherUserId },
-        { sender: otherUserId, receiver: userId },
-      ],
-    }).sort({ timestamp: 1 });
-
+    const messages = await Message.find({ chatId }).sort({ timestamp: 1 });
     console.log(messages);
-
     return sendResponse(res, 200, "Messages successfully fetched", messages);
   } catch (error) {
     console.error("Could not fetch messages:", error);
@@ -46,6 +40,37 @@ const getUserChats = async (req, res) => {
     );
   }
 };
-// End of function to create a new organization
+// End of function to get chats between two users
 
-module.exports = { getUserChats };
+// Controller to create or fetch a chat
+const getOrCreateChat = async (req, res) => {
+  const { participantIds } = req.body; // Array of user IDs
+  const sortedIds = participantIds.sort(); // Ensure consistent order
+
+  try {
+    // Check if a chat with these participants exists
+    let chat = await Chat.findOne({ participants: sortedIds });
+
+    if (!chat) {
+      // If not, create a new chat
+      const chatId = uuidv4();
+      chat = new Chat({
+        chatId,
+        participants: sortedIds,
+      });
+      await chat.save();
+    }
+
+    return sendResponse(res, 200, "Chat successfully fetched", chat);
+  } catch (error) {
+    console.error("Could not fetch messages:", error);
+    return sendResponse(
+      res,
+      500,
+      error?.message || error || "Internal Server Error",
+      null
+    );
+  }
+};
+
+module.exports = { getUserChats, getOrCreateChat };

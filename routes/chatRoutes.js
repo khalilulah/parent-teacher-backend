@@ -4,6 +4,6 @@ const { getUserChats } = require("../controllers/chatControllers");
 const router = express.Router();
 
 // Default password change  Route
-router.get("/:userId/:otherUserId", verifyToken, getUserChats);
+router.get("/:chatId", verifyToken, getUserChats);
 
 module.exports = router;
