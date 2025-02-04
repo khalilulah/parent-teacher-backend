@@ -129,10 +129,16 @@ io.on("connection", (socket) => {
   // Listen for messages from clients
   socket.on("send_message", async (data) => {
     try {
-      let { sender, chatId, message } = data;
+      let { sender, chatId, message, fileUrl, fileType } = data;
 
       // Save message to the database
-      const newMessage = new Message({ sender, chatId, message });
+      const newMessage = new Message({
+        sender,
+        chatId,
+        message: message || "",
+        fileUrl: fileUrl || "",
+        fileType: fileType || "",
+      });
       await newMessage.save();
 
       io.to(chatId).emit("receive_message", newMessage);

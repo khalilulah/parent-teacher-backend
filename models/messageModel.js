@@ -15,8 +15,9 @@ const messageSchema = new mongoose.Schema(
     },
     message: {
       type: String,
-      required: true,
     },
+    fileUrl: { type: String }, // Store Firebase file URL
+    fileType: { type: String }, // e.g., "image/png"
     timestamp: {
       type: Date,
       default: Date.now,
