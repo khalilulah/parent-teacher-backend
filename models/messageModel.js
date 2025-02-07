@@ -18,10 +18,17 @@ const messageSchema = new mongoose.Schema(
     },
     fileUrl: { type: String }, // Store Firebase file URL
     fileType: { type: String }, // e.g., "image/png"
+    fileName: { type: String },
+    fileSize: { type: Number },
     timestamp: {
       type: Date,
       default: Date.now,
     },
+    status: {
+      type: String,
+      enum: ["not delivered", "delivered", "read"],
+      default: "not delivered",
+    }, // Store delivery status
   },
   { timestamps: true }
 );

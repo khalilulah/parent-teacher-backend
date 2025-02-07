@@ -129,21 +129,46 @@ io.on("connection", (socket) => {
   // Listen for messages from clients
   socket.on("send_message", async (data) => {
     try {
-      let { sender, chatId, message, fileUrl, fileType } = data;
+      let { sender, chatId, message, fileUrl, fileType, fileName, fileSize } =
+        data;
+
+      console.log(data);
 
       // Save message to the database
       const newMessage = new Message({
         sender,
         chatId,
         message: message || "",
-        fileUrl: fileUrl || "",
-        fileType: fileType || "",
+        fileUrl,
+        fileType,
+        fileName,
+        fileSize,
+        status: "delivered",
       });
+
       await newMessage.save();
 
       io.to(chatId).emit("receive_message", newMessage);
+
+      // Notify the receiver if online
+      if (connectedUsers[data.receiver]) {
+        io.to(connectedUsers[data.receiver]).emit(
+          "message_delivered",
+          newMessage._id
+        );
+      }
     } catch (err) {
       console.error("Error saving message:", err);
+    }
+  });
+
+  // Mark message as read
+  socket.on("message_read", async (messageId) => {
+    try {
+      await Message.findByIdAndUpdate(messageId, { status: "read" });
+      io.emit("message_status_update", { messageId, status: "read" });
+    } catch (err) {
+      console.error("Error updating message status:", err);
     }
   });
 

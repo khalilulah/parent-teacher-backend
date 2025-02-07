@@ -28,7 +28,6 @@ const getUserChats = async (req, res) => {
 
     // Query DB for specific shats
     const messages = await Message.find({ chatId }).sort({ timestamp: 1 });
-    console.log(messages);
     return sendResponse(res, 200, "Messages successfully fetched", messages);
   } catch (error) {
     console.error("Could not fetch messages:", error);
