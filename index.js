@@ -119,6 +119,17 @@ io.on("connection", (socket) => {
         chat.unreadCount = unreadCount;
       }
 
+      // **Sort chats by the latest message timestamp (descending order)**
+      chats.sort((a, b) => {
+        const timeA = a.latestMessage
+          ? new Date(a.latestMessage.createdAt).getTime()
+          : 0;
+        const timeB = b.latestMessage
+          ? new Date(b.latestMessage.createdAt).getTime()
+          : 0;
+        return timeB - timeA; // Sort descending (latest messages first)
+      });
+
       console.log(chats);
 
       const socketId = connectedUsers[userId];
