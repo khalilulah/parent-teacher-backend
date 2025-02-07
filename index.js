@@ -97,20 +97,36 @@ io.on("connection", (socket) => {
     try {
       console.log("User Id:", userId);
 
-      // Get chats from the database
-      const chats = await Chat.find({
-        participants: { $in: [userId] },
-      }).populate("participants");
+      // Fetch all chats where the user is a participant
+      const chats = await Chat.find({ participants: { $in: [userId] } })
+        .populate("participants")
+        .lean();
 
-      // Get the socket ID of the requesting user
+      for (let chat of chats) {
+        // Fetch latest message
+        const latestMessage = await Message.findOne({ chatId: chat.chatId })
+          .sort({ createdAt: -1 })
+          .lean();
+
+        // Count unread messages
+        const unreadCount = await Message.countDocuments({
+          chatId: chat.chatId,
+          status: "delivered",
+          sender: { $ne: userId }, // Only count messages not sent by the user
+        });
+
+        chat.latestMessage = latestMessage || null;
+        chat.unreadCount = unreadCount;
+      }
+
+      console.log(chats);
+
       const socketId = connectedUsers[userId];
       if (socketId) {
         io.to(socketId).emit("send_users", chats);
       }
-
-      console.log(connectedUsers);
     } catch (err) {
-      console.error("Error saving message:", err);
+      console.error("Error fetching chats:", err);
     }
   });
 
