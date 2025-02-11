@@ -14,6 +14,7 @@ const {
 } = require("../utils/utilFunctions");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const Request = require("../models/requestModel");
 
 /**
  * Validate the password input.
@@ -336,14 +337,26 @@ const addGuardian = async (req, res) => {
     // Verify if the user exists and is active
     const query = {
       email,
-      status: "active",
     };
 
     // Check if a user exists with the same email
     let existingUser = await User.findOne(query);
 
-    if (existingUser) {
+    if (existingUser && existingUser.status === "active") {
       return sendResponse(res, 403, "User already exists", null);
+    }
+
+    if (existingUser && existingUser.status === "inactive") {
+      // Generate password
+      const password = generateStrongPassword(); // Default 12 characters
+
+      // Generate username
+      const uniqueUsername = generateUsername(firstname, surname);
+
+      // Send temporary login credentials
+      await sendTemporaryLoginCredentials(email, firstname, surname, password);
+
+      return sendResponse(res, 201, "Temporary login credentials re-sent");
     } else {
       // Generate password
       const password = generateStrongPassword(); // Default 12 characters
@@ -710,8 +723,74 @@ const updatePasswordByCode = async (req, res) => {
   }
 };
 
+// FUNCTION FOR a teacher to send a request to a guardian
+const sendRequest = async (req, res) => {
+  try {
+    // Get user data from token
+    const { userData } = req.userData;
+
+    // Validate request (Additional validation just in case)
+    if (!userData) {
+      return sendResponse(res, 401, "Please login to continue");
+    }
+
+    const { guardianUsername, message } = req.body;
+
+    // Validate required parameters
+    if (!guardianUsername) {
+      return sendResponse(
+        res,
+        400,
+        "Please provide all required parameters",
+        null
+      );
+    }
+
+    // Check if the guardian exists
+    const guardian = await Guardian.findOne({
+      uniqueUsername: guardianUsername,
+    });
+
+    if (!guardian) {
+      return sendResponse(res, 404, "Guardian not found");
+    }
+
+    // Check if request already exists
+    const existingRequest = await Request.findOne({
+      teacher: userData?._id,
+      guardian: guardian?._id,
+      status: "pending",
+    });
+
+    if (existingRequest) {
+      return sendResponse(res, 400, "Request already sent");
+    }
+
+    // Create new request
+    const newRequest = new Request({
+      teacher: userData?._id,
+      guardian: guardian?._id,
+      message,
+    });
+
+    await newRequest.save();
+
+    return sendResponse(res, 201, "Request sent successfully", newRequest);
+  } catch (error) {
+    console.error("Could not update password:", error);
+    return sendResponse(
+      res,
+      500,
+      error?.message || "Internal Server Error",
+      null
+    );
+  }
+};
+// End of FUNCTION FOR a teacher to send a request to a guardian
+
 module.exports = {
   register,
+  sendRequest,
   login,
   addOrganizationAdmin,
   changePassword,

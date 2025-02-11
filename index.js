@@ -130,8 +130,6 @@ io.on("connection", (socket) => {
         return timeB - timeA; // Sort descending (latest messages first)
       });
 
-      console.log(chats);
-
       const socketId = connectedUsers[userId];
       if (socketId) {
         io.to(socketId).emit("send_users", chats);
@@ -142,9 +140,22 @@ io.on("connection", (socket) => {
   });
 
   // Handle room joining
-  socket.on("join_chat", (chatId) => {
-    socket.join(chatId);
-    console.log(`User joined room: ${chatId}`);
+  socket.on("join_chat", async ({ chatId, userId }) => {
+    try {
+      socket.join(chatId);
+      console.log(`User ${userId} joined room: ${chatId}`);
+
+      // Mark all messages from the other user as "read"
+      await Message.updateMany(
+        { chatId, sender: { $ne: userId }, status: "delivered" },
+        { $set: { status: "read" } }
+      );
+
+      // Notify the frontend that messages have been read
+      io.to(chatId).emit("messages_read", { chatId });
+    } catch (error) {
+      console.error("Error joining chat:", error);
+    }
   });
 
   // Handle room leaving

@@ -19,12 +19,6 @@ const guardianSchema = new mongoose.Schema({
       ref: "Teacher",
     },
   ],
-  requests: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Teacher",
-    },
-  ],
 });
 
 const Guardian = User.discriminator("guardian", guardianSchema);

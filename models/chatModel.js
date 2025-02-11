@@ -26,6 +26,12 @@ const chatSchema = new mongoose.Schema(
         return this.type === "group";
       },
     },
+    latestMessage: {
+      type: String,
+    },
+    unreadCount: {
+      type: Number,
+    },
   },
   { timestamps: true }
 );
