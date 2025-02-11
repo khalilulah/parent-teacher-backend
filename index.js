@@ -10,6 +10,7 @@ const {
   userRoutes,
   organizationRoutes,
   chatRoutes,
+  requestRoutes,
 } = require("./routes");
 const Message = require("./models/messageModel");
 const User = require("./models/userModel");
@@ -51,6 +52,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/organization", organizationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/messages", chatRoutes);
+app.use("/api/requests", requestRoutes);
 
 // API Connection test
 app.get("/", (req, res) => {
