@@ -15,6 +15,7 @@ const {
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Request = require("../models/requestModel");
+const { io } = require("..");
 
 /**
  * Validate the password input.
@@ -724,7 +725,7 @@ const updatePasswordByCode = async (req, res) => {
 };
 
 // FUNCTION FOR a teacher to send a request to a guardian
-const sendRequest = async (req, res) => {
+const sendRequest = async (req, res, io) => {
   try {
     // Get user data from token
     const { userData } = req.userData;
@@ -774,6 +775,8 @@ const sendRequest = async (req, res) => {
     });
 
     await newRequest.save();
+    // Emit event to notify guardians
+    io.emit("new_request");
 
     return sendResponse(res, 201, "Request sent successfully", newRequest);
   } catch (error) {

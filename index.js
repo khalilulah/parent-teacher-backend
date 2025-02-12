@@ -48,7 +48,7 @@ app.use(express.json());
 app.use(cors(corsOptions));
 
 // ROUTES
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authRoutes(io));
 app.use("/api/organization", organizationRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/messages", chatRoutes);
@@ -171,8 +171,6 @@ io.on("connection", (socket) => {
     try {
       let { sender, chatId, message, fileUrl, fileType, fileName, fileSize } =
         data;
-
-      console.log(data);
 
       // Save message to the database
       const newMessage = new Message({
