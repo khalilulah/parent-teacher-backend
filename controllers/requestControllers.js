@@ -1,6 +1,8 @@
+const Chat = require("../models/chatModel");
 const { Guardian } = require("../models/guardianModel");
 const Request = require("../models/requestModel");
 const { sendResponse } = require("../utils/utilFunctions");
+const { v4: uuidv4 } = require("uuid"); // For generating unique chat IDs
 
 // Function to get all requests
 const getRequests = async (req, res) => {
@@ -73,7 +75,7 @@ const acceptRequest = async (req, res) => {
       return sendResponse(res, 403, "Unauthorized action");
     }
 
-    // Update request status
+    // Update request status]
     request.status = "accepted";
     await request.save();
 
@@ -81,6 +83,23 @@ const acceptRequest = async (req, res) => {
     await Guardian.findByIdAndUpdate(guardianId, {
       $addToSet: { teachers: request.teacher },
     });
+
+    // Create Chat between users
+    const participantIds = [guardianId, request?.teacher];
+    const sortedIds = participantIds.sort();
+
+    // Check if a chat with these participants exists
+    let chat = await Chat.findOne({ participants: sortedIds });
+
+    if (!chat) {
+      // If not, create a new chat
+      const chatId = uuidv4();
+      chat = new Chat({
+        chatId,
+        participants: sortedIds,
+      });
+      await chat.save();
+    }
 
     sendResponse(res, 200, "Request accepted successfully", request);
   } catch (error) {
