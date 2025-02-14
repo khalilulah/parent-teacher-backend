@@ -1,6 +1,7 @@
 const Chat = require("../models/chatModel");
 const { Guardian } = require("../models/guardianModel");
 const Request = require("../models/requestModel");
+const { Teacher } = require("../models/teacherModel");
 const { sendResponse } = require("../utils/utilFunctions");
 const { v4: uuidv4 } = require("uuid"); // For generating unique chat IDs
 
@@ -82,6 +83,11 @@ const acceptRequest = async (req, res) => {
     // Add teacher to the guardian's teachers list
     await Guardian.findByIdAndUpdate(guardianId, {
       $addToSet: { teachers: request.teacher },
+    });
+
+    // Add guardian to the teachers list
+    await Teacher.findByIdAndUpdate(request.teacher, {
+      $addToSet: { guardians: guardianId },
     });
 
     // Create Chat between users

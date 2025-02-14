@@ -1,6 +1,8 @@
 const Chat = require("../models/chatModel");
+const { Guardian } = require("../models/guardianModel");
 const Message = require("../models/messageModel");
 const Organization = require("../models/organizationModel");
+const { Teacher } = require("../models/teacherModel");
 const { sendResponse } = require("../utils/utilFunctions");
 
 // Function to get chats between two users
@@ -29,6 +31,35 @@ const getUserChats = async (req, res) => {
     // Query DB for specific shats
     const messages = await Message.find({ chatId }).sort({ timestamp: 1 });
     return sendResponse(res, 200, "Messages successfully fetched", messages);
+  } catch (error) {
+    console.error("Could not fetch messages:", error);
+    return sendResponse(
+      res,
+      500,
+      error?.message || error || "Internal Server Error",
+      null
+    );
+  }
+};
+// End of function to get chats between two users
+
+// Function to get all users
+const getAllUsers = async (req, res) => {
+  try {
+    // Get user data from token
+    const { userData } = req.userData;
+
+    // Validate request (Additional validation just in case)
+    if (!userData) {
+      return sendResponse(res, 401, "Please login to continue", null);
+    }
+
+    const userId = userData?._id;
+
+    // Fetch user's guardians
+    const users = await Guardian.find({ teachers: { $in: [userId] } });
+
+    return sendResponse(res, 200, "Users successfully fetched", users);
   } catch (error) {
     console.error("Could not fetch messages:", error);
     return sendResponse(
@@ -72,4 +103,4 @@ const getOrCreateChat = async (req, res) => {
   }
 };
 
-module.exports = { getUserChats, getOrCreateChat };
+module.exports = { getUserChats, getOrCreateChat, getAllUsers };

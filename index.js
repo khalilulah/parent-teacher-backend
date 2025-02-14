@@ -200,6 +200,50 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Listen for messages from clients
+  socket.on("broadcast_message", async (data) => {
+    try {
+      let {
+        sender,
+        message,
+        fileUrl,
+        fileType,
+        fileName,
+        fileSize,
+        recipientIds,
+        chatIds,
+      } = data;
+
+      for (const chatId of chatIds) {
+        // Save message to the database
+        const newMessage = new Message({
+          sender,
+          chatId,
+          message: message || "",
+          fileUrl,
+          fileType,
+          fileName,
+          fileSize,
+          status: "delivered",
+        });
+
+        await newMessage.save();
+
+        io.to(chatId).emit("receive_message", newMessage);
+
+        // Notify the receiver if online
+        if (connectedUsers[data.receiver]) {
+          io.to(connectedUsers[data.receiver]).emit(
+            "message_delivered",
+            newMessage._id
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Error saving message:", err);
+    }
+  });
+
   // Mark message as read
   socket.on("message_read", async (messageId) => {
     try {
