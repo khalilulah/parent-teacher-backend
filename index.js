@@ -215,11 +215,17 @@ io.on("connection", (socket) => {
       } = data;
 
       for (const chatId of chatIds) {
+        const user = await User.findById(chatId?.userId);
+
+        const userTitle = user?.title || "Mr";
+
+        const updatedMessage = `Dear ${userTitle} ${user?.firstname}. ${message}`;
+
         // Save message to the database
         const newMessage = new Message({
           sender,
-          chatId,
-          message: message || "",
+          chatId: chatId?.chatId,
+          message: updatedMessage || "",
           fileUrl,
           fileType,
           fileName,

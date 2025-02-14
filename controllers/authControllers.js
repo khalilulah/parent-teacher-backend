@@ -328,10 +328,10 @@ const addGuardian = async (req, res) => {
     }
 
     // Extract necessary details
-    const { firstname, surname, email } = req.body;
+    const { firstname, surname, email, title } = req.body;
 
     // Validate required fields
-    if (!firstname || !surname || !email) {
+    if (!firstname || !surname || !email || !title) {
       return sendResponse(res, 400, "Please provide all required parameters");
     }
 
@@ -369,6 +369,7 @@ const addGuardian = async (req, res) => {
         email,
         password,
         firstname,
+        title,
         surname,
         uniqueUsername,
         addedBy: userData?._id,

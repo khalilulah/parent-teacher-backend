@@ -52,6 +52,10 @@ const userSchema = new mongoose.Schema(
       enum: ["inactive", "active", "suspended", "deactivated"],
       default: "inactive",
     },
+    title: {
+      type: String,
+      enum: ["Miss", "Mr", "Mrs"],
+    },
     addedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User", // References superAdmin
