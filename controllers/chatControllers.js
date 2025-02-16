@@ -330,8 +330,44 @@ const modifyGroupUsers = async (req, res) => {
     return sendResponse(res, 500, "Internal Server Error", null);
   }
 };
-
 // End of function to modify group users
+
+// Function to delete a group chat
+const deleteGroup = async (req, res) => {
+  try {
+    const { userData } = req.userData; // Get logged-in user ID
+    const { chatId } = req.body;
+
+    if (!chatId) {
+      return sendResponse(res, 400, "Chat ID is required", null);
+    }
+
+    const chat = await Chat.findOne({ chatId });
+
+    if (!chat || chat.type !== "group") {
+      return sendResponse(res, 404, "Group chat not found", null);
+    }
+
+    // Ensure only the creator can delete the group (Modify if needed)
+    if (chat.participants[0].toString() !== userData._id) {
+      return sendResponse(
+        res,
+        403,
+        "Only the group creator can delete this group",
+        null
+      );
+    }
+
+    await Chat.deleteOne({ chatId });
+
+    return sendResponse(res, 200, "Group deleted successfully", null);
+  } catch (error) {
+    console.error("Error deleting group:", error);
+    return sendResponse(res, 500, "Internal Server Error", null);
+  }
+};
+
+// End of function to delete a group chat
 
 module.exports = {
   getUserChats,
@@ -342,4 +378,5 @@ module.exports = {
   createGroupChat,
   addUsersToGroup,
   renameGroup,
+  deleteGroup,
 };
