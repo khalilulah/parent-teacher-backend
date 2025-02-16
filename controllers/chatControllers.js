@@ -4,6 +4,7 @@ const Message = require("../models/messageModel");
 const Organization = require("../models/organizationModel");
 const { Teacher } = require("../models/teacherModel");
 const { sendResponse } = require("../utils/utilFunctions");
+const { v4: uuidv4 } = require("uuid"); // For generating unique chat IDs
 
 // Function to get chats between two users
 const getUserChats = async (req, res) => {
@@ -103,4 +104,129 @@ const getOrCreateChat = async (req, res) => {
   }
 };
 
-module.exports = { getUserChats, getOrCreateChat, getAllUsers };
+// Function to create group chat
+const createGroupChat = async (req, res) => {
+  try {
+    // Get user data from token
+    const { userData } = req.userData;
+
+    // Validate request (Additional validation just in case)
+    if (!userData) {
+      return sendResponse(res, 401, "Please login to continue");
+    }
+
+    const { groupName, participantIds } = req.body;
+
+    // Validate whom is creating a group chat
+    if (userData.role !== "teacher") {
+      return sendResponse(res, 403, "Only teachers can create groups", null);
+    }
+
+    // Validate required fields
+    if (!groupName || !participantIds?.length) {
+      return sendResponse(
+        res,
+        400,
+        "Group name and participants are required",
+        null
+      );
+    }
+
+    // Create new chat
+    const newChat = new Chat({
+      chatId: uuidv4(),
+      participants: [userData._id, ...participantIds],
+      type: "group",
+      name: groupName,
+    });
+
+    // Save chat and send response
+    await newChat.save();
+    return sendResponse(res, 200, "Group chat created successfully", newChat);
+  } catch (error) {
+    console.error("Error creating group:", error);
+    return sendResponse(res, 500, "Internal Server Error", null);
+  }
+};
+// End of function to create group chat
+
+// Add users to the group chat
+const addUsersToGroup = async (req, res) => {
+  try {
+    const { userData } = req.userData;
+    const { chatId, newParticipantIds } = req.body; // Expect an array of IDs
+
+    if (
+      !chatId ||
+      !Array.isArray(newParticipantIds) ||
+      newParticipantIds.length === 0
+    ) {
+      return sendResponse(
+        res,
+        400,
+        "Chat ID and a list of participant IDs are required",
+        null
+      );
+    }
+
+    const chat = await Chat.findOne({ chatId });
+
+    if (!chat || chat.type !== "group") {
+      return sendResponse(res, 404, "Group chat not found", null);
+    }
+
+    if (!chat.participants.includes(userData._id)) {
+      return sendResponse(res, 403, "Only group members can add users", null);
+    }
+
+    // Filter out existing participants
+    const newUsers = newParticipantIds.filter(
+      (id) => !chat.participants.includes(id)
+    );
+
+    if (newUsers.length === 0) {
+      return sendResponse(res, 400, "All users are already in the group", null);
+    }
+
+    chat.participants.push(...newUsers);
+    await chat.save();
+
+    return sendResponse(res, 200, "Users added to group successfully", chat);
+  } catch (error) {
+    console.error("Error adding users to group:", error);
+    return sendResponse(res, 500, "Internal Server Error", null);
+  }
+};
+
+// End of function to add a user or users to the group chat
+
+// Fetch all group chats a user is part of
+const getUserGroups = async (req, res) => {
+  try {
+    const { userData } = req.userData; // Get logged-in user ID
+
+    if (!userData?._id) {
+      return sendResponse(res, 400, "User ID is required", null);
+    }
+
+    // Find all group chats where the user is a participant
+    const groups = await Chat.find({
+      type: "group",
+      participants: userData._id,
+    }).sort({ createdAt: -1 });
+
+    return sendResponse(res, 200, "User groups fetched successfully", groups);
+  } catch (error) {
+    console.error("Error fetching user groups:", error);
+    return sendResponse(res, 500, "Internal Server Error", null);
+  }
+};
+
+module.exports = {
+  getUserChats,
+  getUserGroups,
+  getOrCreateChat,
+  getAllUsers,
+  createGroupChat,
+  addUsersToGroup,
+};
