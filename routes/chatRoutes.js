@@ -7,6 +7,7 @@ const {
   addUsersToGroup,
   getUserGroups,
   renameGroup,
+  modifyGroupUsers,
 } = require("../controllers/chatControllers");
 const router = express.Router();
 
@@ -27,5 +28,8 @@ router.post("/addUsers", verifyRole(["teacher"]), addUsersToGroup);
 
 // Route to rename a group
 router.put("/renameGroup", verifyRole(["teacher"]), renameGroup);
+
+// Modify group users (Add or Remove)
+router.put("/modifyGroupUsers", verifyRole(["teacher"]), modifyGroupUsers);
 
 module.exports = router;
