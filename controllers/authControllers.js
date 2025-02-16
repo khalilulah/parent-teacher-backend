@@ -432,7 +432,6 @@ const login = async (req, res) => {
     // Extracting request body parameter using destructuring
     const { email, password } = req.body;
 
-    console.log(email);
     // Validate input parameters
     if (!email || !password) {
       // Sending a 400 response if any required parameter is missing
@@ -452,7 +451,12 @@ const login = async (req, res) => {
 
     // If the user exists
     if (existingUser) {
-      {
+      if (existingUser?.isDefaultPassword) {
+        return sendResponse(res, 200, "Welcome! Please create a new password", {
+          action: "changeDefaultPassword",
+        });
+      } else {
+        console.log("Not def");
         // If user exists and is active, compare their passwords
         // Verify password
         const passwordMatch = await bcrypt.compare(
