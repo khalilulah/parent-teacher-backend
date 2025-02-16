@@ -125,10 +125,10 @@ io.on("connection", (socket) => {
       chats.sort((a, b) => {
         const timeA = a.latestMessage
           ? new Date(a.latestMessage.createdAt).getTime()
-          : 0;
+          : new Date(a.createdAt).getTime(); // Use chat creation time if no messages
         const timeB = b.latestMessage
           ? new Date(b.latestMessage.createdAt).getTime()
-          : 0;
+          : new Date(b.createdAt).getTime();
         return timeB - timeA; // Sort descending (latest messages first)
       });
 

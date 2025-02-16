@@ -213,7 +213,9 @@ const getUserGroups = async (req, res) => {
     const groups = await Chat.find({
       type: "group",
       participants: userData._id,
-    }).sort({ createdAt: -1 });
+    })
+      .populate("participants")
+      .sort({ createdAt: -1 });
 
     return sendResponse(res, 200, "User groups fetched successfully", groups);
   } catch (error) {
@@ -221,6 +223,44 @@ const getUserGroups = async (req, res) => {
     return sendResponse(res, 500, "Internal Server Error", null);
   }
 };
+// End of function to fetch all group chats a user is a part of
+
+// Function to rename a group
+const renameGroup = async (req, res) => {
+  try {
+    const { userData } = req.userData; // Get logged-in user ID
+    const { chatId, newName } = req.body;
+
+    if (!chatId || !newName) {
+      return sendResponse(res, 400, "Chat ID and new name are required", null);
+    }
+
+    const chat = await Chat.findOne({ chatId });
+
+    if (!chat || chat.type !== "group") {
+      return sendResponse(res, 404, "Group chat not found", null);
+    }
+
+    if (!chat.participants.includes(userData._id)) {
+      return sendResponse(
+        res,
+        403,
+        "Only group members can rename the group",
+        null
+      );
+    }
+
+    chat.name = newName;
+    await chat.save();
+
+    return sendResponse(res, 200, "Group renamed successfully", chat);
+  } catch (error) {
+    console.error("Error renaming group:", error);
+    return sendResponse(res, 500, "Internal Server Error", null);
+  }
+};
+
+// End of function to rename a group
 
 module.exports = {
   getUserChats,
@@ -229,4 +269,5 @@ module.exports = {
   getAllUsers,
   createGroupChat,
   addUsersToGroup,
+  renameGroup,
 };
