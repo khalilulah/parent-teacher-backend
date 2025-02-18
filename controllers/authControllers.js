@@ -451,12 +451,16 @@ const login = async (req, res) => {
 
     // If the user exists
     if (existingUser) {
+      // Create and assign a JWT
+      // Generate JWT token for the user
+      const token = generateToken(existingUser, "100y"); // Generating a token with 1-hour expiry
+
       if (existingUser?.isDefaultPassword) {
         return sendResponse(res, 200, "Welcome! Please create a new password", {
           action: "changeDefaultPassword",
+          token,
         });
       } else {
-        console.log("Not def");
         // If user exists and is active, compare their passwords
         // Verify password
         const passwordMatch = await bcrypt.compare(
@@ -469,10 +473,6 @@ const login = async (req, res) => {
           return sendResponse(res, 401, "Incorrect login credentials", null);
         } else {
           // If the paswwords match
-
-          // Create and assign a JWT
-          // Generate JWT token for the user
-          const token = generateToken(existingUser, "100y"); // Generating a token with 1-hour expiry
 
           //   UPDATE THE LASTLOGIN FIELD
           existingUser.lastLogin = new Date();
