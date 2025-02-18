@@ -34,7 +34,7 @@ const getRequests = async (req, res) => {
     const requests = await Request.find(searchQuery)
       .populate({
         path: "teacher",
-        model: "User", // Since Teacher is a discriminator of User
+        model: "User", // Since "Teacher" is a discriminator of User
       })
       .sort({ timestamp: 1 });
     return sendResponse(res, 200, "Requests successfully fetched", requests);
