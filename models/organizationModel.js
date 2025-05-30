@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+const { required } = require("joi");
+>>>>>>> 9c526da (created file upload functionality)
 const mongoose = require("mongoose");
 
 // Organization (School) Schema
@@ -14,6 +18,13 @@ const organizationSchema = new mongoose.Schema(
       country: String,
       postalCode: String,
     },
+<<<<<<< HEAD
+=======
+    logo: {
+      type: String,
+      required: true,
+    },
+>>>>>>> 9c526da (created file upload functionality)
     admins: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: "User",
