@@ -796,6 +796,49 @@ const sendRequest = async (req, res, io) => {
 };
 // End of FUNCTION FOR a teacher to send a request to a guardian
 
+// Function to get teacher's organisations
+const getTeacherOrgs = async (req, res) => {
+  try {
+    // Get user data from token
+    const { userData } = req.userData;
+
+    // Validate request (Additional validation just in case)
+    if (!userData) {
+      return sendResponse(res, 401, "Please login to continue");
+    }
+
+    const { teacherIds } = req.body;
+
+    if (!teacherIds || !Array.isArray(teacherIds)) {
+      return res.status(400).json({
+        success: false,
+        message: "teacherIds must be a valid array.",
+      });
+    }
+
+    const teachers = await Teacher.find({ _id: { $in: teacherIds } }).populate({
+      path: "organization",
+      select: "name address logo", // select only the fields you need
+    });
+
+    return sendResponse(
+      res,
+      200,
+      "Teachers with their organizations",
+      teachers
+    );
+  } catch (error) {
+    console.error("Could not update password:", error);
+    return sendResponse(
+      res,
+      500,
+      error?.message || "Internal Server Error",
+      null
+    );
+  }
+};
+// End of Function to get teacher's organisations
+
 module.exports = {
   register,
   sendRequest,
@@ -805,5 +848,6 @@ module.exports = {
   sendCode,
   updatePasswordByCode,
   addTeacher,
+  getTeacherOrgs,
   addGuardian,
 };

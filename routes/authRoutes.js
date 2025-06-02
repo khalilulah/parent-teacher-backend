@@ -10,6 +10,7 @@ const {
   addTeacher,
   addGuardian,
   sendRequest,
+  getTeacherOrgs,
 } = require("../controllers/authControllers");
 const { verifyRole, verifyToken } = require("../utils/utilFunctions");
 
@@ -52,6 +53,9 @@ module.exports = (io) => {
 
   // Resend OTP Route
   router.post("/sendOtp", sendCode);
+
+  // Get teachers orgs
+  router.post("/getTeacherOrgs", verifyRole(["guardian"]), getTeacherOrgs);
 
   return router;
 };
