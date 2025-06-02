@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-const Organization = require("../models/organizationModel");
-const { sendResponse } = require("../utils/utilFunctions");
-=======
 const { initializeApp } = require("firebase/app");
 const Organization = require("../models/organizationModel");
 const { sendResponse } = require("../utils/utilFunctions");
@@ -32,7 +28,7 @@ const getFile = async (req) => {
     const file = req.file;
 
     if (!file) {
-      return sendResponse(res, 400, "No file uploaded", null);
+      return res.status(400).json({ message: "No file uploaded" });
     }
 
     // Create a reference in Firebase Storage
@@ -55,19 +51,15 @@ const getFile = async (req) => {
     return err;
   }
 };
->>>>>>> 9c526da (created file upload functionality)
 
 // Function to create a new organization
 const createOrganization = async (req, res) => {
   try {
-<<<<<<< HEAD
-=======
     // 1. Upload file to get url
     const fileDetails = await getFile(req);
     console.log(fileDetails);
 
     // Proceed with Organisation registration if file upload is successful
->>>>>>> 9c526da (created file upload functionality)
     // Get user data from token
     const { userData } = req.userData;
 
@@ -93,7 +85,6 @@ const createOrganization = async (req, res) => {
       name,
       address: { city },
       createdBy: userData?._id,
-      logo: fileDetails,
     };
 
     // Save new org. details to the DB
