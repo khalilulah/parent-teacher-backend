@@ -32,7 +32,7 @@ const getFile = async (req) => {
     const file = req.file;
 
     if (!file) {
-      return res.status(400).json({ message: "No file uploaded" });
+      return sendResponse(res, 400, "No file uploaded", null);
     }
 
     // Create a reference in Firebase Storage
@@ -93,6 +93,7 @@ const createOrganization = async (req, res) => {
       name,
       address: { city },
       createdBy: userData?._id,
+      logo: fileDetails,
     };
 
     // Save new org. details to the DB
