@@ -55,7 +55,7 @@ module.exports = (io) => {
   router.post("/sendOtp", sendCode);
 
   // Get teachers orgs
-  router.get("/getTeacherOrgs", verifyRole(["guardian"]), getTeacherOrgs);
+  router.post("/getTeacherOrgs", verifyRole(["guardian"]), getTeacherOrgs);
 
   return router;
 };
