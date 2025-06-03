@@ -809,7 +809,7 @@ const getTeacherOrgs = async (req, res) => {
 
     const { teacherIds } = req.body;
 
-    if (!teacherIds || !Array.isArray(teacherIds)) {
+    if (!teacherIds || teacherIds.length < 1) {
       return res.status(400).json({
         success: false,
         message: "teacherIds must be a valid array.",
