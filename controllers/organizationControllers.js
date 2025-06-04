@@ -57,7 +57,6 @@ const createOrganization = async (req, res) => {
   try {
     // 1. Upload file to get url
     const fileDetails = await getFile(req);
-    console.log(fileDetails);
 
     // Proceed with Organisation registration if file upload is successful
     // Get user data from token
@@ -68,10 +67,11 @@ const createOrganization = async (req, res) => {
       return sendResponse(res, 401, "Please login to continue", null);
     }
 
-    const { name, street, city, state, country, postalCode } = req?.body;
+    const { name, street, city, state, country, postalCode, location } =
+      req?.body;
 
     // Validate required fields
-    if (!name) {
+    if (!name || !location) {
       return sendResponse(
         res,
         400,
@@ -83,6 +83,7 @@ const createOrganization = async (req, res) => {
     // Details of the new organization
     const newOrgDetails = {
       name,
+      location,
       address: { city },
       createdBy: userData?._id,
     };
