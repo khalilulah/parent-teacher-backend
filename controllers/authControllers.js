@@ -818,7 +818,7 @@ const getTeacherOrgs = async (req, res) => {
 
     const teachers = await Teacher.find({ _id: { $in: teacherIds } }).populate({
       path: "organization",
-      select: "name address logo", // select only the fields you need
+      select: "name address logo location", // select only the fields you need
     });
 
     return sendResponse(
